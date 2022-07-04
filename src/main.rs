@@ -60,11 +60,6 @@ fn get_board(spaces_array: &[[&Character; 3]; 3]) -> Result<String, io::Error>{
             // iterate over width (columns)
             let mut j = 0;
             while j < board_width {
-                // print!(
-                //     "Row: {}, Column: {}\n", 
-                //     i - (i / &board_space_height) * &board_space_height,
-                //     j - (j / &board_space_width) * &board_space_width
-                // );
                 if j % board_space_width == 0 || j == board_width - 1 {
                     board.push_str("#");
                 } else if 
@@ -130,6 +125,25 @@ fn parse_commands(line: &str) -> Result<Vec<String>, Error> {
 
 }
 
+fn validate_move(
+    coordinates: &Coordinates,
+    spaces_array: &[[&Character; 3]; 3]
+) -> Result<()>{
+    if (coordinates.row as usize)  < spaces_array.len() {
+        println!("Valid row");
+    } else {
+        // TODO: More descriptive error message for row/col
+        return Err(anyhow!{"Row input is not valid."});
+    }
+    if (coordinates.col as usize) < spaces_array[0].len() {
+        println!("Valid col");
+    } else {
+        return Err(anyhow!{"Column input is not valid."});
+    }
+
+    Ok(())
+}
+
 fn move_character<'a, 'b, 'c>(
     selected_name: &'c str, 
     space_name: &'c str, 
@@ -145,6 +159,14 @@ fn move_character<'a, 'b, 'c>(
     // TODO: Add "move range" (or something) to character class and use manhattan distance from Unreal project
     // TODO: Highlight available spaces for move by using parentheses around character on space
 
+    match validate_move(&move_to_coordinates, &spaces_array) {
+        Ok(()) => println!("OK"),
+        Err(e) => {
+            println!("{}", e);
+            return Err(e);
+        }
+    };
+    
     println!("Moving Character to {}", space_name);
     spaces_array[move_to_coordinates.row as usize][move_to_coordinates.col as usize] = selected_character;
     spaces_array[select_coordinates.row as usize][select_coordinates.col as usize] = empty_space;
@@ -183,6 +205,10 @@ fn main() -> Result<()> {
         
         // Render board on enter or ctrl-c to quit
         select! {
+            recv(ctrl_c_events) -> _ => {
+                println!("Goodbye!");
+                break;
+            }
             recv(ticks) -> _ => {
                 println!("{}", get_board(&spaces_array)?);
                 // Do game logic here
@@ -193,11 +219,6 @@ fn main() -> Result<()> {
                 
                 // selected_coordinates = parse_coordinates(&line)?;
                 move_character(&commands[0], &commands[2], &mut spaces_array, &empty_space);
-            }
-            recv(ctrl_c_events) -> _ => {
-                println!();
-                println!("Goodbye");
-                break;
             }
         }
     }
