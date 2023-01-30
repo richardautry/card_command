@@ -37,6 +37,10 @@ fn ctrl_channel() -> Result<Receiver<()>, ctrlc::Error>{
     Ok(receiver)
 }
 
+fn is_center(index: i32, width: i32, offset: i32) -> Result<bool, io::Error>{
+    Ok((index - ((index / width) * width)) == (width / 2) + offset)
+}
+
 // TODO: Label the board spaces
 
 fn get_board(spaces_array: &[[&Character; 3]; 3]) -> Result<String, io::Error>{
@@ -52,8 +56,26 @@ fn get_board(spaces_array: &[[&Character; 3]; 3]) -> Result<String, io::Error>{
     while i < board_height {
         if i % board_space_height == 0 || i == board_height - 1 {
             let mut j = 0;
+            // Create horizontal border
             while j < board_width {
-                board.push_str("#");
+                if i != board_height - 1 {
+                    if is_center(j as i32, board_space_width as i32, 0).unwrap(){
+                        board.push_str("A");
+                    } else if 
+                        is_center(j as i32, board_space_width as i32, 1).unwrap() {
+                        board.push_str("1");
+                    } else if 
+                        is_center(j as i32, board_space_width as i32, -1).unwrap() ||
+                        is_center(j as i32, board_space_width as i32, 2).unwrap()
+                    {
+                        board.push_str(" ");
+                    } else {
+                        board.push_str("#");
+                    }
+                } else {
+                    board.push_str("#");
+                }
+                
                 j += 1;
             }
         } else {
@@ -61,7 +83,7 @@ fn get_board(spaces_array: &[[&Character; 3]; 3]) -> Result<String, io::Error>{
             let mut j = 0;
             while j < board_width {
                 if j % board_space_width == 0 || j == board_width - 1 {
-                    board.push_str("#");
+                    board.push_str("#");   
                 } else if 
                     i - (i / &board_space_height) * &board_space_height == board_space_height / 2 && 
                     j - (j / &board_space_width) * &board_space_width == board_space_width / 2
@@ -197,6 +219,8 @@ fn main() -> Result<()> {
 
     spaces_array[0][0] = &soldier_data;
 
+    println!("Press Enter to start game. Ctrl-C to exit.");
+
     loop {
         let mut line = String::new();
         let mut selected_coordinates:Coordinates;
@@ -211,6 +235,7 @@ fn main() -> Result<()> {
             }
             recv(ticks) -> _ => {
                 println!("{}", get_board(&spaces_array)?);
+                println!("Move Command: <column_letter><row_number> to <column_letter><row_number>");
                 // Do game logic here
                 let commands = match parse_commands(&line) {
                     Ok(commands) => commands,
